@@ -325,10 +325,8 @@ bool VisionEnv::changeObsLoc(void){
 }
 bool VisionEnv::readTrainingObs(std::string &csv_file, int obsNo) {
   //
-    logger_.info(csv_file);
   if (!(file_exists(csv_file))) {
       logger_.info(csv_file);
-
     logger_.error("Configuration file %s does not exists.", csv_file);
     return false;
   }
@@ -341,8 +339,11 @@ bool VisionEnv::readTrainingObs(std::string &csv_file, int obsNo) {
       Vector<3> pos;
       pos << std::stod((std::string)row[0]), std::stod((std::string)row[1]),
         std::stod((std::string)row[2]);
+      Vector<3> scale;
+      scale << std::stod((std::string)row[3]),std::stod((std::string)row[3]),std::stod((std::string)row[3]);
     
       dynamic_objects_[obsNo]->setPosition(pos);
+      dynamic_objects_[obsNo]->setScale(scale);
       return true;
     }
     i++;
