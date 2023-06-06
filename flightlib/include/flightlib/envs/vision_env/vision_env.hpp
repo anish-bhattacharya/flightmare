@@ -112,7 +112,9 @@ class VisionEnv final : public EnvBase {
   bool readTrainingObs(std::string &csv_file, int obsNo);
   bool move(void);
   int _numRun = 0;
+  bool _move_obst_trigger = 0;
   bool _datagen = 0;
+  bool _rollout = 0;
 
   /******************************/
 
@@ -182,6 +184,7 @@ class VisionEnv final : public EnvBase {
   //
   std::string static_object_csv_;
   std::string obstacle_cfg_path_;
+  std::string dynamic_obstacle_cfg_path_;
   int num_dynamic_objects_;
   int num_static_objects_;
 };

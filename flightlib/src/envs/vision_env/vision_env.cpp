@@ -59,19 +59,35 @@ void VisionEnv::init() {
       "Cannot config RGB Camera. Something wrong with the config file");
   }
 
-  obstacle_cfg_path_ = getenv("FLIGHTMARE_PATH") +
-                       std::string("/flightpy/configs/vision/") +
-                       difficulty_level_ + std::string("/") + env_folder_;
+  if (_datagen){
+
+    obstacle_cfg_path_ = getenv("FLIGHTMARE_PATH") +
+                        std::string("/flightpy/configs/vision/") +
+                        difficulty_level_ + std::string("/") + env_folder_;
+  }
+  else if (_rollout){
+
+    obstacle_cfg_path_ = getenv("FLIGHTMARE_PATH") +
+                        std::string("/flightpy/configs/vision/") +
+                        std::string("custom_") +
+                        difficulty_level_;
+  }
+  // if neither datagen nor rollout set, throw error
+  else{
+    logger_.error("Neither datagen nor rollout set. One of these must be set to 1 in config.yaml!");
+  }
 
   // add dynamic objects
-  std::string dynamic_object_yaml =
-    obstacle_cfg_path_ + std::string("/dynamic_obstacles.yaml");
+  std::string dynamic_object_yaml = obstacle_cfg_path_ + std::string("/dynamic_obstacles.yaml");
+
   if (!configDynamicObjects(dynamic_object_yaml)) {
     logger_.error(
       "Cannot config Dynamic Object Yaml. Something wrong with the config "
       "file");
   }
 
+  // if in rollout, ignore static objects
+  // if (!_rollout){
   // add static objects
   static_object_csv_ =
     obstacle_cfg_path_ + std::string("/static_obstacles.csv");
@@ -79,6 +95,7 @@ void VisionEnv::init() {
     logger_.error(
       "Cannot config Static Object. Something wrong with the config file");
   }
+  // }
 
   // use single rotor control or bodyrate control
   Scalar max_force = quad_ptr_->getDynamics().getForceMax();
@@ -294,18 +311,19 @@ bool VisionEnv::simDynamicObstacles(const Scalar dt) {
 /*MODIFIED - 13TH APRIL*/
 bool VisionEnv::move(void){
   //Call the move Dynamic Obstacles Functions
-  if(!moveDynamicObstacles(_datagen)) return false;
+  logger_.info("Calling moveDynamicObstacles");
+  if(!moveDynamicObstacles(_move_obst_trigger)) return false;
   return true;
 }
 
 bool VisionEnv::moveDynamicObstacles(bool trigger){
   if(!trigger) return false;
 
-  logger_.info("Moving Static Obstacles!");
+  logger_.info("Moving Static (faked dynamic) Obstacles");
   
   if(!changeObsLoc()) return false;
   //Obstacle change was successful! next time trial number would increase
-  logger_.info("Obstacle Changes Successful!");
+  logger_.info("Obstacle Changes Successful");
   _numRun+=1; 
   return true; 
 }
@@ -330,8 +348,8 @@ bool VisionEnv::readTrainingObs(std::string &csv_file, int obsNo) {
     logger_.error("Configuration file %s does not exists.", csv_file);
     return false;
   }
-  logger_.info("Changing Position!");
-  logger_.info(std::to_string(_numRun));
+  // logger_.info("Changing Position!");
+  // logger_.info(std::to_string(_numRun));
   std::ifstream infile(csv_file);
   int i=0;
   for(auto &row: CSVRange(infile)){
@@ -532,13 +550,13 @@ bool VisionEnv::loadParam(const YAML::Node &cfg) {
   }
 
   //[KR_AGILE] Modifications by Dhruv 17th April
-  if (cfg["datagen"]){
-    _datagen = 1; 
-  }
-  else{
-    _datagen = 0;
-  }
+  _datagen = cfg["datagen"].as<int>() != 0;
+  _rollout = cfg["rollout"].as<int>() != 0;
+  _move_obst_trigger = _datagen || _rollout;
 
+  logger_.info("Datagen: %d",_datagen);
+  logger_.info("Rollout: %d",_rollout);
+  logger_.info("Move Obstacle Trigger: %d",_move_obst_trigger);
 
   //
   std::string scene_file =
@@ -560,6 +578,9 @@ bool VisionEnv::loadParam(const YAML::Node &cfg) {
 
 bool VisionEnv::configDynamicObjects(const std::string &yaml_file) {
   //
+
+  logger_.info("Configuring dynamic objects from: %s", yaml_file.c_str());
+
   if (!(file_exists(yaml_file))) {
     logger_.error("Configuration file %s does not exists.", yaml_file);
     return false;
@@ -608,6 +629,9 @@ bool VisionEnv::configDynamicObjects(const std::string &yaml_file) {
 
 bool VisionEnv::configStaticObjects(const std::string &csv_file) {
   //
+
+  logger_.info("Configuring static objects from: %s", csv_file.c_str());
+
   if (!(file_exists(csv_file))) {
     logger_.error("Configuration file %s does not exists.", csv_file);
     return false;
