@@ -11,7 +11,7 @@ VisionEnv::VisionEnv(const std::string &cfg_path, const int env_id)
   : EnvBase() {
   // check if configuration file exist
   if (!(file_exists(cfg_path))) {
-    logger_.error("Configuration file %s does not exists.", cfg_path);
+    logger_.error("[VisionEnv] Configuration file %s does not exists.", cfg_path);
   }
   // load configuration file
   cfg_ = YAML::LoadFile(cfg_path);
@@ -76,6 +76,9 @@ void VisionEnv::init() {
   else{
     logger_.error("Neither datagen nor rollout set. One of these must be set to 1 in config.yaml!");
   }
+
+  // if 'trees' string in the obstacle_cfg_path_, then set this bool to true
+  is_trees_ = obstacle_cfg_path_.find("trees") != std::string::npos;
 
   // add dynamic objects
   std::string dynamic_object_yaml = obstacle_cfg_path_ + std::string("/dynamic_obstacles.yaml");
@@ -201,7 +204,9 @@ bool VisionEnv::getObstacleState(Ref<Vector<>> obs_state) {
   // compute relatiev distance to static obstacles
   for (int i = 0; i < (int)static_objects_.size(); i++) {
     // compute relative position vector
+    // if tree environment, set the z-distance to 0
     Vector<3> delta_pos = static_objects_[i]->getPos() - quad_state_.p;
+    if (is_trees_) delta_pos.z() = 0.0;
     relative_pos.push_back(delta_pos);
 
 
@@ -327,25 +332,27 @@ bool VisionEnv::moveDynamicObstacles(bool trigger){
   _numRun+=1; 
   return true; 
 }
+
 bool VisionEnv::changeObsLoc(void){
   //For each static objects
-  logger_.info(std::to_string(num_dynamic_objects_));
+  logger_.info("Number of dynamic objects found: " + std::to_string(num_dynamic_objects_));
   //For each dynamic object
-  for (int i=0;i<num_dynamic_objects_;i++){
+  for (int i = 0; i < num_dynamic_objects_; i++){
     //Get the static data file
-    std::string csvFile = obstacle_cfg_path_+std::string("/static_kr_") + std::to_string(i) +std::string(".csv");
-    if(!readTrainingObs(csvFile,i)){
-      logger_.error("Function didn't run as intended!");
+    std::string csvFile = obstacle_cfg_path_ + std::string("/static_kr_") + std::to_string(i) +std::string(".csv");
+    if(!readTrainingObs(csvFile, i)){
+      logger_.error("[changeObsLoc] Function didn't run as intended!");
       return false; //We should not return and let the obstacles stay constant?
     }
   }
   return true;
 }
+
 bool VisionEnv::readTrainingObs(std::string &csv_file, int obsNo) {
   //
   if (!(file_exists(csv_file))) {
-      logger_.info(csv_file);
-    logger_.error("Configuration file %s does not exists.", csv_file);
+    logger_.info(csv_file);
+    logger_.error("[readTrainingObs] Configuration file %s does not exists.", csv_file);
     return false;
   }
   // logger_.info("Changing Position!");
@@ -582,7 +589,7 @@ bool VisionEnv::configDynamicObjects(const std::string &yaml_file) {
   logger_.info("Configuring dynamic objects from: %s", yaml_file.c_str());
 
   if (!(file_exists(yaml_file))) {
-    logger_.error("Configuration file %s does not exists.", yaml_file);
+    logger_.error("[configDynamicObjects] Dynamic objects YAML file %s does not exist.", yaml_file);
     return false;
   }
   YAML::Node cfg_node = YAML::LoadFile(yaml_file);
@@ -616,7 +623,7 @@ bool VisionEnv::configDynamicObjects(const std::string &yaml_file) {
     std::string csv_file = obstacle_cfg_path_ + std::string("/csvtrajs/") +
                            csv_name + std::string(".csv");
     if (!(file_exists(csv_file))) {
-      logger_.error("Configuration file %s does not exists.", csv_file);
+      logger_.error("[configDynamicObjects] CSV file %s does not exist.", csv_file);
       return false;
     }
     obj->loadTrajectory(csv_file);
@@ -633,7 +640,7 @@ bool VisionEnv::configStaticObjects(const std::string &csv_file) {
   logger_.info("Configuring static objects from: %s", csv_file.c_str());
 
   if (!(file_exists(csv_file))) {
-    logger_.error("Configuration file %s does not exists.", csv_file);
+    logger_.error("[configStaticObjects] CSV file %s does not exists.", csv_file);
     return false;
   }
   std::ifstream infile(csv_file);
