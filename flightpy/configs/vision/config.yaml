@@ -1,30 +1,30 @@
 environment:
-  level: "medium_trees" # three difficulty level [easy, medium, hard]
-  env_folder: "environment_0" # configurations for dynamic and static obstacles
+  level: "realtrees_random" # three difficulty level [easy, medium, hard]
+  env_folder: "environment_2" # configurations for dynamic and static obstacles
   world_box: [-20, 80, -10, 10, 0.5, 10] # Bounding box applied during training, exiting this box terminates the episode. [xmin, xmax, ymin, ymax, zmin, zmax]
   goal_vel: [1.0, 0.0, 0.0] # goal velicty for tracking vx, vy, vz
   max_detection_range: 10.0 # max obstacle detection range [m], obstacles outside this range will not be detected. The number of obstacles detected is fixed to 10, if less than 10 obstacles are within detectable range, the observation is padded with 10.0
 
-datagen: 1
-rollout: 0
+datagen: 0
+rollout: 1
 
 quad_radius: 0.10 # estimated radius of the quadrotor [m]
 
 rgb_camera:
-  on: yes 
+  on: yes
   t_BC: [0.3, 0.0, 0.0] # translational vector of the camera with repect to the body frame
   r_BC: [0.0, 0.0, -90] # rotational angle (roll, pitch, yaw) of the camera in degree.
   channels: 3
-  width: 640 
-  height: 480
-  fov: 150.0
-  enable_depth: yes 
+  width: 346
+  height: 260
+  fov: 70.0
+  enable_depth: yes
   enable_segmentation: no
   enable_opticalflow: no
 
 unity:
-  scene_id: 0 # 0 warehouse, 1 street, 2 forest, 3 wasteland
-  render: no 
+  scene_id: 2 # 0 empty, 1 industrial, 2 warehouse, 3 forest
+  render: yes
 
 simulation:
   seed: 10

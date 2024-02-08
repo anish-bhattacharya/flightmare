@@ -361,13 +361,27 @@ bool VisionEnv::readTrainingObs(std::string &csv_file, int obsNo) {
   int i=0;
   for(auto &row: CSVRange(infile)){
     if (i==_numRun){
+      
       Vector<3> pos;
-      pos << std::stod((std::string)row[0]), std::stod((std::string)row[1]),
-        std::stod((std::string)row[2]);
+      pos << std::stod((std::string)row[1]), std::stod((std::string)row[2]),
+        std::stod((std::string)row[3]);
+
+      Quaternion quat;
+      quat.w() = std::stod((std::string)row[4]);
+      quat.x() = std::stod((std::string)row[5]);
+      // for some reason y and z are switched to match static obstacle rotation behavior
+      quat.y() = std::stod((std::string)row[7]);
+      quat.z() = std::stod((std::string)row[6]);
+
+      // Vector<4> quat;
+      // quat << std::stod((std::string)row[4]), std::stod((std::string)row[5]),
+      //   std::stod((std::string)row[6]), std::stod((std::string)row[7]);
+      
       Vector<3> scale;
-      scale << std::stod((std::string)row[3]),std::stod((std::string)row[3]),std::stod((std::string)row[3]);
+      scale << std::stod((std::string)row[8]),std::stod((std::string)row[10]),std::stod((std::string)row[9]);
     
       dynamic_objects_[obsNo]->setPosition(pos);
+      dynamic_objects_[obsNo]->setRotation(quat);
       dynamic_objects_[obsNo]->setScale(scale);
       return true;
     }
@@ -552,9 +566,12 @@ bool VisionEnv::loadParam(const YAML::Node &cfg) {
 
   // environment
   if (cfg["unity"]) {
-    unity_render_ = cfg["unity"]["render"].as<bool>();
     scene_id_ = cfg["unity"]["scene_id"].as<SceneID>();
+    unity_render_ = cfg["unity"]["render"].as<bool>();
   }
+
+  logger_.warn("[loadParam] Scene ID: %d", scene_id_);
+  logger_.warn("[loadParam] Unity Render: %d", unity_render_);
 
   //[KR_AGILE] Modifications by Dhruv 17th April
   _datagen = cfg["datagen"].as<int>() != 0;
@@ -601,8 +618,7 @@ bool VisionEnv::configDynamicObjects(const std::string &yaml_file) {
   for (int i = 0; i < num_objects; i++) {
     std::string object_id = "Object" + std::to_string(i + 1);
     std::string prefab_id = cfg_node[object_id]["prefab"].as<std::string>();
-    std::shared_ptr<UnityObject> obj =
-      std::make_shared<UnityObject>(object_id, prefab_id);
+    std::shared_ptr<UnityObject> obj = std::make_shared<UnityObject>(object_id, prefab_id);
 
     // load location, rotation and size
     std::vector<Scalar> posvec =
